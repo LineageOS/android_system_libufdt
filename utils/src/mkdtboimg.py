@@ -39,6 +39,146 @@ class DtEntry(object):
     Attributes:
         _REQUIRED_KEYS: 'keys' needed to be present in the dictionary passed to instantiate
             an object of this class.
+    """
+    REQUIRED_KEYS = ('dt_file', 'dt_size', 'dt_offset', 'id', 'rev',
+                     'custom0', 'custom1', 'custom2', 'custom3')
+
+    @staticmethod
+    def __get_number_or_prop(arg):
+        """Converts string to integer or reads the property from DT image.
+
+        Args:
+            arg: String containing the argument provided on the command line.
+
+        Returns:
+            An integer property read from DT file or argument string
+            converted to integer
+        """
+
+        if not arg or arg[0] == '+' or arg[0] == '-':
+            raise ValueError('Invalid argument passed to DTImage')
+        if arg[0] == '/':
+            # TODO(b/XXX): Use pylibfdt to get property value from DT
+            raise ValueError('Invalid argument passed to DTImage')
+        else:
+            base = 10
+            if arg.startswith('0x') or arg.startswith('0X'):
+                base = 16
+            elif arg.startswith('0'):
+                base = 8
+            return int(arg, base)
+
+    def __init__(self, **kwargs):
+        """Constructor for DtEntry object.
+
+        Initializes attributes from dictionary object that contains
+        values keyed with names equivalent to the class's attributes.
+
+        Args:
+            kwargs: Dictionary object containing values to instantiate
+                class members with. Expected keys in dictionary are from
+                the tuple (_REQUIRED_KEYS)
+        """
+
+        missing_keys = set(self.REQUIRED_KEYS) - set(kwargs)
+        if missing_keys:
+            raise ValueError('Missing keys in DtEntry constructor: %r' %
+                             sorted(missing_keys))
+
+        self.__dt_file = kwargs['dt_file']
+        self.__dt_offset = kwargs['dt_offset']
+        self.__dt_size = kwargs['dt_size']
+        self.__id = self.__get_number_or_prop(kwargs['id'])
+        self.__rev = self.__get_number_or_prop(kwargs['rev'])
+        self.__custom0 = self.__get_number_or_prop(kwargs['custom0'])
+        self.__custom1 = self.__get_number_or_prop(kwargs['custom1'])
+        self.__custom2 = self.__get_number_or_prop(kwargs['custom2'])
+        self.__custom3 = self.__get_number_or_prop(kwargs['custom3'])
+
+    def __str__(self):
+        sb = []
+        sb.append('{key:>20} = {value:d}'.format(key='dt_size',
+                                                 value=self.__dt_size))
+        sb.append('{key:>20} = {value:d}'.format(key='dt_offset',
+                                                 value=self.__dt_offset))
+        sb.append('{key:>20} = {value:08x}'.format(key='id',
+                                                   value=self.__id))
+        sb.append('{key:>20} = {value:08x}'.format(key='rev',
+                                                   value=self.__rev))
+        sb.append('{key:>20} = {value:08x}'.format(key='custom[0]',
+                                                   value=self.__custom0))
+        sb.append('{key:>20} = {value:08x}'.format(key='custom[1]',
+                                                   value=self.__custom1))
+        sb.append('{key:>20} = {value:08x}'.format(key='custom[2]',
+                                                   value=self.__custom2))
+        sb.append('{key:>20} = {value:08x}'.format(key='custom[3]',
+                                                   value=self.__custom3))
+        return '\n'.join(sb)
+
+    def compression_info(self, version):
+        """CompressionFormat: compression format for DT image file."""
+        return CompressionFormat.NO_COMPRESSION
+
+    @property
+    def dt_file(self):
+        """file: File handle to the DT image file."""
+        return self.__dt_file
+
+    @property
+    def size(self):
+        """int: size in bytes of the DT image file."""
+        return self.__dt_size
+
+    @size.setter
+    def size(self, value):
+        self.__dt_size = value
+
+    @property
+    def dt_offset(self):
+        """int: offset in DTBO file for this DT image."""
+        return self.__dt_offset
+
+    @dt_offset.setter
+    def dt_offset(self, value):
+        self.__dt_offset = value
+
+    @property
+    def image_id(self):
+        """int: DT entry _id for this DT image."""
+        return self.__id
+
+    @property
+    def rev(self):
+        """int: DT entry _rev for this DT image."""
+        return self.__rev
+
+    @property
+    def custom0(self):
+        """int: DT entry _custom0 for this DT image."""
+        return self.__custom0
+
+    @property
+    def custom1(self):
+        """int: DT entry _custom1 for this DT image."""
+        return self.__custom1
+
+    @property
+    def custom2(self):
+        """int: DT entry custom2 for this DT image."""
+        return self.__custom2
+
+    @property
+    def custom3(self):
+        """int: DT entry custom3 for this DT image."""
+        return self.__custom3
+
+
+class DtEntryV1(object):
+    """Provides individual DT image file arguments to be added to a DTBO.
+
+    Attributes:
+        _REQUIRED_KEYS: 'keys' needed to be present in the dictionary passed to instantiate
+            an object of this class.
         _COMPRESSION_FORMAT_MASK: Mask to retrieve compression info for DT entry from flags field
             when a DTBO header of version 1 is used.
     """
@@ -108,13 +248,13 @@ class DtEntry(object):
                                                    value=self.__id))
         sb.append('{key:>20} = {value:08x}'.format(key='rev',
                                                    value=self.__rev))
-        sb.append('{key:>20} = {value:08x}'.format(key='custom[0]',
+        sb.append('{key:>20} = {value:08x}'.format(key='flags',
                                                    value=self.__flags))
-        sb.append('{key:>20} = {value:08x}'.format(key='custom[1]',
+        sb.append('{key:>20} = {value:08x}'.format(key='custom[0]',
                                                    value=self.__custom0))
-        sb.append('{key:>20} = {value:08x}'.format(key='custom[2]',
+        sb.append('{key:>20} = {value:08x}'.format(key='custom[1]',
                                                    value=self.__custom1))
-        sb.append('{key:>20} = {value:08x}'.format(key='custom[3]',
+        sb.append('{key:>20} = {value:08x}'.format(key='custom[2]',
                                                    value=self.__custom2))
         return '\n'.join(sb)
 
@@ -125,8 +265,6 @@ class DtEntry(object):
                 version: Version of DTBO header, compression is only
                          supported from version 1.
         """
-        if version is 0:
-            return CompressionFormat.NO_COMPRESSION
         return self.flags & self._COMPRESSION_FORMAT_MASK
 
     @property
@@ -233,10 +371,17 @@ class Dtbo(object):
             dtbo_offset: Offset where the DT image file for this dt_entry can
                 be found in the resulting DTBO image.
         """
-        struct.pack_into('>8I', self.__metadata, metadata_offset, dt_entry.size,
-                         dt_entry.dt_offset, dt_entry.image_id, dt_entry.rev,
-                         dt_entry.flags, dt_entry.custom0, dt_entry.custom1,
-                         dt_entry.custom2)
+        if self.version == 0:
+            struct.pack_into('>8I', self.__metadata, metadata_offset, dt_entry.size,
+                             dt_entry.dt_offset, dt_entry.image_id, dt_entry.rev,
+                             dt_entry.custom0, dt_entry.custom1, dt_entry.custom2,
+                             dt_entry.custom3)
+        elif version == 1:
+            struct.pack_into('>8I', self.__metadata, metadata_offset, dt_entry.size,
+                             dt_entry.dt_offset, dt_entry.image_id, dt_entry.rev,
+                             dt_entry.flags, dt_entry.custom0, dt_entry.custom1,
+                             dt_entry.custom2)
+
 
     def _update_metadata(self):
         """Updates the DTBO metadata.
@@ -298,9 +443,14 @@ class Dtbo(object):
             dt_table_entry = self.__metadata[offset:offset + self._DT_ENTRY_HEADER_INTS]
             params['dt_size'] = dt_table_entry[0]
             params['dt_offset'] = dt_table_entry[1]
-            for j in range(2, self._DT_ENTRY_HEADER_INTS):
-                params[DtEntry.REQUIRED_KEYS[j + 1]] = str(dt_table_entry[j])
-            dt_entry = DtEntry(**params)
+            if version == 0:
+                for j in range(2, self._DT_ENTRY_HEADER_INTS):
+                    params[DtEntry.REQUIRED_KEYS[j + 1]] = str(dt_table_entry[j])
+                dt_entry = DtEntry(**params)
+            elif version == 1:
+                for j in range(2, self._DT_ENTRY_HEADER_INTS):
+                    params[DtEntryV1.REQUIRED_KEYS[j + 1]] = str(dt_table_entry[j])
+                dt_entry = DtEntryV1(**params)
             self.__dt_entries.append(dt_entry)
             offset += self._DT_ENTRY_HEADER_INTS
 
@@ -468,7 +618,7 @@ class Dtbo(object):
 
         dt_entry_buf = ""
         for dt_entry in dt_entries:
-            if not isinstance(dt_entry, DtEntry):
+            if not isinstance(dt_entry, DtEntry) and not isinstance(dt_entry, DtEntryV1):
                 raise ValueError('Adding invalid DT entry object to DTBO')
             entry = self._find_dt_entry_with_same_file(dt_entry)
             dt_entry_compression_info = dt_entry.compression_info(self.version)
@@ -581,6 +731,9 @@ def parse_dt_entry(global_args, arglist):
     parser.add_argument('--custom2', type=str, dest='custom2',
                         action='store',
                         default=global_args.global_custom2)
+    parser.add_argument('--custom3', type=str, dest='custom3',
+                        action='store',
+                        default=global_args.global_custom3)
     return parser.parse_args(arglist)
 
 
@@ -624,7 +777,10 @@ def parse_dt_entries(global_args, arg_list):
         params = vars(args)
         params['dt_offset'] = 0
         params['dt_size'] = os.fstat(params['dt_file'].fileno()).st_size
-        dt_entries.append(DtEntry(**params))
+        if global_args.version == 0:
+            dt_entries.append(DtEntry(**params))
+        elif global_args.version == 1:
+            dt_entries.append(DtEntryV1(**params))
 
     return dt_entries
 
@@ -754,6 +910,8 @@ def parse_create_args(arg_list):
                         action='store', default='0')
     parser.add_argument('--custom2', type=str, dest='global_custom2',
                         action='store', default='0')
+    parser.add_argument('--custom3', type=str, dest='global_custom3',
+                        action='store', default='0')
     args = parser.parse_args(argv)
     return args, remainder
 
@@ -846,11 +1004,15 @@ def create_dtbo_image_from_config(fout, argv):
     if not args.conf_file:
         raise ValueError('Configuration file must be provided')
 
-    _DT_KEYS = ('id', 'rev', 'flags', 'custom0', 'custom1', 'custom2')
+    _DTV0_KEYS = ('id', 'rev', 'custom0', 'custom1', 'custom2', 'custom3')
+    _DTV1_KEYS = ('id', 'rev', 'flags', 'custom0', 'custom1', 'custom2')
+    _DT_KEYS = _DTV0_KEYS + _DTV1_KEYS
     _GLOBAL_KEY_TYPES = {'dt_type': str, 'page_size': int, 'version': int}
 
     global_args, dt_args = parse_config_file(args.conf_file,
                                              _DT_KEYS, _GLOBAL_KEY_TYPES)
+    version = global_args['version']
+
     params = {}
     dt_entries = []
     for dt_arg in dt_args:
@@ -866,10 +1028,13 @@ def create_dtbo_image_from_config(fout, argv):
                 params[key] = global_args[key]
             else:
                 params[key] = dt_arg[key]
-        dt_entries.append(DtEntry(**params))
+        if version == 0:
+            dt_entries.append(DtEntry(**params))
+        elif version == 1:
+            dt_entries.append(DtEntryV1(**params))
 
     # Create and write DTBO file
-    dtbo = Dtbo(fout, global_args['dt_type'], global_args['page_size'], global_args['version'])
+    dtbo = Dtbo(fout, global_args['dt_type'], global_args['page_size'], version)
     dt_entry_buf = dtbo.add_dt_entries(dt_entries)
     dtbo.commit(dt_entry_buf)
     fout.close()
@@ -920,6 +1085,7 @@ def print_create_usage(progname):
     sb.append('      --custom0=<number>')
     sb.append('      --custom1=<number>')
     sb.append('      --custom2=<number>\n')
+    sb.append('      --custom3=<number>\n')
 
     sb.append('      The value could be a number or a DT node path.')
     sb.append('      <number> could be a 32-bits digit or hex value, ex. 68000, 0x6800.')
