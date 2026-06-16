@@ -100,7 +100,7 @@ static __inline char *med3(char *a, char *b, char *c,
 void qsort(void *aa, size_t n, size_t es,
            int (*cmp)(const void *, const void *)) {
   char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
-  int d, r, swaptype, swap_cnt;
+  int d, l, r, swaptype, swap_cnt;
   char *a = aa;
 loop:
   SWAPINIT(a, es);
@@ -161,14 +161,29 @@ loop:
   vecswap(a, pb - r, r);
   r = min(pd - pc, pn - pd - (int)es);
   vecswap(pb, pn - r, r);
-  if ((r = pb - pa) > (int)es) qsort(a, r / es, es, cmp);
-  if ((r = pd - pc) > (int)es) {
-    /* Iterate rather than recurse to save stack space */
-    a = pn - r;
-    n = r / es;
-    goto loop;
+
+  l = pb - pa; /* size of partition 'left' of pivot */
+  r = pd - pc; /* size of partition 'right' of pivot */
+
+  /* recurse on the smaller partition, iterate on larger */
+  if (l < r) {
+    if (l > (int)es) {
+      qsort(a, l / es, es, cmp);
+    }
+    if (r > (int)es) {
+      a = pn - r;
+      n = r / es;
+      goto loop;
+    }
+  } else {
+    if (r > (int)es) {
+      qsort(pn - r, r / es, es, cmp);
+    }
+    if (l > (int)es) {
+      n = l / es;
+      goto loop;
+    }
   }
-  /* qsort(pn - r, r / es, es, cmp); */
 }
 
 /* End of the copied qsort. */
